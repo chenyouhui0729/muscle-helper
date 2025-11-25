@@ -15,7 +15,9 @@ def find_muscle(df, keyword):
 def main():
     st.title("肌智救星-肌肉學習助手（網頁版 Prototype）")
 
-    df = load_muscles()
+    # 使用最上面讀取到的 df（GitHub 版本）
+global df
+
 
     keyword = st.text_input("請輸入肌肉名稱（中/英文）：" , "")
 
@@ -35,4 +37,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
