@@ -1,10 +1,8 @@
 import pandas as pd
 import streamlit as st
 
-# 讀取 CSV
-@st.cache_data
-def load_muscles(csv_path="muscles.csv"):
-    return pd.read_csv(csv_path)
+# 只用 GitHub 最新 CSV
+df = pd.read_csv("https://raw.githubusercontent.com/chenyouhui0729/muscle-helper/main/muscles.csv")
 
 def find_muscle(df, keyword):
     keyword = keyword.strip().lower()
@@ -15,7 +13,7 @@ def find_muscle(df, keyword):
     return None
 
 def main():
-    st.title("🧠 物治系肌肉學習助手（網頁版 Prototype）")
+    st.title("肌智救星-肌肉學習助手（網頁版 Prototype）")
 
     df = load_muscles()
 
@@ -37,3 +35,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
