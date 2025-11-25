@@ -1,7 +1,7 @@
 import pandas as pd
 import streamlit as st
 
-# 永遠讀 GitHub 上最新的 CSV
+# 永遠讀 GitHub CSV
 df = pd.read_csv(
     "https://raw.githubusercontent.com/chenyouhui0729/muscle-helper/main/muscles.csv"
 )
@@ -20,7 +20,7 @@ def find_muscle(df, keyword):
 def main():
     st.title("肌智救星 - 肌肉學習助手（網頁版 Prototype）")
 
-    global df  # 使用上面 GitHub 載入的 df
+    global df
 
     keyword = st.text_input("請輸入肌肉名稱（中/英文）：", "")
 
@@ -30,29 +30,31 @@ def main():
         if muscle is not None:
             st.subheader(f"{muscle['chinese_name']} / {muscle['english_name']}")
 
-            # ====== 顯示 image_url 內容，方便你確認 ======
+            # ===========================
+            # 顯示多張圖片（防呆版）
+            # ===========================
             if "image_url" in muscle.index:
-                st.write("image_url 欄位內容：", muscle["image_url"])
+                urls_raw = str(muscle["image_url"]).strip()
+
+                if urls_raw and urls_raw.lower() != "nan":
+                    urls_raw = urls_raw.replace("；", ";")
+                    url_list = [
+                        u.strip() for u in urls_raw.split(";") if u.strip() != ""
+                    ]
+                    for url in url_list:
+                        try:
+                            st.image(url, use_column_width=True)
+                        except Exception as e:
+                            st.warning(f"⚠️ 無法載入圖片：{url}")
+                            st.caption(f"錯誤訊息：{e}")
+                else:
+                    st.info("這個肌肉目前沒有圖片。")
             else:
-                st.write("⚠️ 這筆資料沒有找到 image_url 欄位（請檢查 CSV 欄位名稱）")
+                st.info("CSV 中沒有找到 image_url 欄位。")
 
-            # ====== 方法 2：一個欄位放多張圖，用分號 ; 分隔 ======
-            urls_raw = str(muscle.get("image_url", "")).strip()
-
-            # 避免出現 'nan' 或空字串
-            if urls_raw and urls_raw.lower() != "nan":
-                # 支援中英文分號；先把中文分號換成英文
-                urls_raw = urls_raw.replace("；", ";")
-                url_list = [
-                    u.strip() for u in urls_raw.split(";") if u.strip() != ""
-                ]
-
-                # 逐一顯示圖片
-                for url in url_list:
-                    st.image(url, use_column_width=True)
-            # ==============================================
-
-            # 文字資訊
+            # ===========================
+            # 文字內容完整顯示
+            # ===========================
             st.write(f"**起點 Origin：** {muscle['origin']}")
             st.write(f"**終點 Insertion：** {muscle['insertion']}")
             st.write(f"**神經 Innervation：** {muscle['innervation']}")
