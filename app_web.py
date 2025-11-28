@@ -1,131 +1,132 @@
-def main():
-    st.title("🐥 肌智救星 - 肌肉學習助手（網頁版 Prototype）")
+import pandas as pd
+import streamlit as st
+from urllib.parse import quote_plus
+from streamlit_autorefresh import st_autorefresh
+import random
 
-    # 🔁 每 60 秒自動刷新一次，用來輪播小知識 / 冷笑話
-    # 🚨 改用不同的 key，避免跟 session_state 打架
-    count = st_autorefresh(interval=60 * 1000, key="trivia_auto")
+# ===============================
+# 🎨 背景 + 跑馬燈 CSS
+# ===============================
+page_bg = """
+<style>
+body {
+    background: linear-gradient(135deg, #fff5f7, #e6f7ff);
+}
 
-    # 手動換句數量（自己維護一個 clicks 計數器）
-    if "trivia_clicks" not in st.session_state:
-        st.session_state["trivia_clicks"] = 0
+/* 大按鈕 (KenHub) */
+.big-btn {
+    display: inline-block;
+    padding: 14px 22px;
+    background-color: #ff85a2;
+    color: white !important;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 12px;
+    text-align: center;
+    text-decoration: none;
+    transition: 0.2s;
+}
+.big-btn:hover {
+    background-color: #ff668a;
+}
 
-    # 目前要顯示第幾句：自動 + 手動
-    idx = (count + st.session_state["trivia_clicks"]) % len(MUSCLE_TRIVIA)
+@media (max-width: 600px) {
+    .big-btn {
+        font-size: 16px;
+        padding: 12px 18px;
+    }
+}
 
-    # 📰 跑馬燈顯示小知識 / 冷笑話
-    trivia_text = MUSCLE_TRIVIA[idx]
-    st.markdown(
-        f"""
-        <div class="marquee-container">
-            <div class="marquee-text">{trivia_text}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+.marquee-container {
+    overflow: hidden;
+    white-space: nowrap;
+    background: #ffe9f0;
+    border-radius: 999px;
+    padding: 8px 16px;
+    border: 1px solid #ffb6c9;
+    margin-bottom: 12px;
+}
 
-    # 手動換一句的按鈕（不再改動 trivia_auto）
-    if st.button("換一句小知識 / 冷笑話 🔄"):
-        st.session_state["trivia_clicks"] += 1
-        st.experimental_rerun()
+.marquee-text {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 18s linear infinite;
+    font-size: 14px;
+}
 
-    # =======================
-    # 🔎 肌肉查詢區
-    # =======================
-    st.subheader("🔍 肌肉資料查詢")
-    keyword = st.text_input("👉 請輸入肌肉名稱（中/英文）：", "")
+@media (max-width: 600px) {
+    .marquee-text {
+        font-size: 15px;
+    }
+}
 
-    if keyword:
-        muscle = find_muscle(df, keyword)
-        if muscle is not None:
+@keyframes marquee {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(-100%, 0); }
+}
+</style>
+"""
+st.markdown(page_bg, unsafe_allow_html=True)
 
-            st.markdown(f"### 💪 {muscle['chinese_name']} / {muscle['english_name']}")
+# ===============================
+# 💡 小知識 / 冷笑話
+# ===============================
+MUSCLE_TRIVIA = [
+    "💡 小知識：人體超過 600 塊骨骼肌，你現在正在背其中一塊！📚",
+    "😆 冷笑話：為什麼肱二頭肌很愛照鏡子？因為它怕自己變成肱一頭肌 💘",
+    "💡 小知識：臀大肌是人體最大肌肉，負責站起來和走路 🍑",
+    "😆 冷笑話：肌肉不會背叛你，但你會背叛它（不練就沒了）📉",
+    "💡 小知識：咀嚼肌 Masseter 是全身最有力的肌肉之一 🦷",
+    "💡 小知識：心肌一天跳 10 萬次，它比你更努力 ❤️",
+]
 
-            # 🔗 KenHub 搜尋按鈕
-            kenhub_button(muscle)
+# ===============================
+# CSV
+# ===============================
+df = pd.read_csv(
+    "https://raw.githubusercontent.com/chenyouhui0729/muscle-helper/main/muscles.csv"
+).fillna("（未填寫）")
 
-            st.write("---")
+# ===============================
+# 搜尋肌肉
+# ===============================
+def find_muscle(df, keyword):
+    k = keyword.strip().lower()
+    mask = df["english_name"].str.lower().str.contains(k) | df["chinese_name"].str.contains(keyword)
+    return df[mask].iloc[0] if mask.any() else None
 
-            # 📌 肌肉資訊
-            st.write(f"📍 **起點 Origin：** {muscle['origin']}")
-            st.write(f"🎯 **終點 Insertion：** {muscle['insertion']}")
-            st.write(f"⚡ **神經 Innervation：** {muscle['innervation']}")
-            st.write(f"🩸 **血管 Blood supply：** {muscle['blood_supply']}")
-            st.write(f"🏃 **動作 Actions：** {muscle['actions']}")
+# ===============================
+# KenHub 按鈕
+# ===============================
+def kenhub_button(muscle):
+    eng = quote_plus(muscle["english_name"])
+    url = f"https://www.google.com/search?tbm=isch&q=site:kenhub.com+{eng}"
+    st.markdown(f'<a href="{url}" target="_blank" class="big-btn">🔍 點我開啟網站看圖片</a>', unsafe_allow_html=True)
 
-        else:
-            st.error("找不到這塊肌肉 😢 請換另一個關鍵字試試看！")
+# ===============================
+# 小測驗
+# ===============================
+QUIZ_FIELD_MAP = {
+    "origin": "起點 Origin",
+    "insertion": "終點 Insertion",
+    "innervation": "神經 Innervation",
+    "actions": "動作 Actions",
+}
 
-    st.info("✨ 提示：可輸入：肱二頭肌、三角肌、biceps、deltoid…")
+def generate_quiz(df, field):
+    valid = df[df[field] != "（未填寫）"]
+    if valid.empty:
+        return None
 
-    st.write("---")
+    muscle = valid.sample(1).iloc[0]
+    correct = muscle[field]
 
-    # =======================
-    # 🎲 隨機抽考區塊
-    # =======================
-    st.subheader("🎲 隨機抽考 - 肌肉小測驗")
+    wrong = valid[field].unique().tolist()
+    wrong = [w for w in wrong if w != correct]
 
-    quiz_field = st.selectbox(
-        "想被考哪一個項目？",
-        options=list(QUIZ_FIELD_MAP.keys()),
-        format_func=lambda k: QUIZ_FIELD_MAP[k],
-    )
+    distractors = random.sample(wrong, min(3, len(wrong)))
+    options = [correct] + distractors
+    random.shuffle(options)
 
-    if "quiz" not in st.session_state:
-        st.session_state["quiz"] = None
-    if "quiz_answer" not in st.session_state:
-        st.session_state["quiz_answer"] = None
-
-    col_q1, col_q2 = st.columns([1, 1])
-
-    with col_q1:
-        if st.button("出一題 🎲"):
-            quiz = generate_quiz(df, quiz_field)
-            if quiz is None:
-                st.warning("目前這個欄位沒有足夠的資料可以出題 🥲")
-            else:
-                st.session_state["quiz"] = quiz
-                st.session_state["quiz_answer"] = None
-
-    with col_q2:
-        if st.button("清除本題 ↩️"):
-            st.session_state["quiz"] = None
-            st.session_state["quiz_answer"] = None
-
-    quiz = st.session_state.get("quiz", None)
-
-    if quiz is not None:
-        st.markdown(
-            f"**題目：** 請問 **{quiz['muscle_ch']} / {quiz['muscle_en']}** 的 **{quiz['field_label']}** 是哪一個？"
-        )
-
-        chosen = st.radio(
-            "請選出正確答案：",
-            quiz["options"],
-            index=0 if st.session_state["quiz_answer"] is None else quiz["options"].index(
-                st.session_state["quiz_answer"]
-            ) if st.session_state["quiz_answer"] in quiz["options"] else 0,
-        )
-
-        if st.button("提交答案 ✅"):
-            st.session_state["quiz_answer"] = chosen
-            if chosen == quiz["correct"]:
-                st.success("答對了！🎉 你的肌肉記憶正在變強 💪")
-            else:
-                st.error("答錯了 😢 再試試看！")
-                st.info(f"✅ 正確答案是：{quiz['correct']}")
-
-            muscle_row = df[
-                (df["english_name"] == quiz["muscle_en"])
-                & (df["chinese_name"] == quiz["muscle_ch"])
-            ]
-            if not muscle_row.empty:
-                m = muscle_row.iloc[0]
-                st.write("---")
-                st.markdown(f"**📚 額外複習：{m['chinese_name']} / {m['english_name']}**")
-                st.write(f"📍 起點 Origin：{m['origin']}")
-                st.write(f"🎯 終點 Insertion：{m['insertion']}")
-                st.write(f"⚡ 神經 Innervation：{m['innervation']}")
-                st.write(f"🩸 血管 Blood supply：{m['blood_supply']}")
-                st.write(f"🏃 動作 Actions：{m['actions']}")
-    else:
-        st.caption("按「出一題 🎲」開始測驗吧！")
+    return {
+        "muscle_ch":_
